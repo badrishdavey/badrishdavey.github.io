@@ -1,0 +1,557 @@
+# SEC-HPLC Glycan Analysis Data Product Specification
+# This YAML file defines the complete data product specification for automated bronze-to-silver data processing
+
+apiVersion: dataproduct/v1
+kind: DataProductSpecification
+
+metadata:
+  name: "sec-hplc-glycan-analysis"
+  title: "SEC-HPLC Glycan Analysis Data Product"
+  description: "Size exclusion chromatography HPLC analytical results for glycan species analysis with purity metrics"
+  version: "1.0.0"
+  created_date: "2025-08-30"
+  domain: "analytical-chemistry"
+  subdomain: "glycan-analysis"
+  business_glossary_url: "https://company.com/glossary/glycan-terms"
+  tags:
+    - "sec-hplc"
+    - "glycan"
+    - "analytical-chemistry" 
+    - "purity-analysis"
+    - "bronze-layer"
+    - "92-percent-popularity"
+
+# FAIR Principles Implementation
+fair_compliance:
+  findable:
+    globally_unique_identifier:
+      pattern: "GLY_SEC_HPLC_{YYYY}{MM}{DD}_{####}"
+      generation_rule: "Auto-generated with date and sequence"
+      example: "GLY_SEC_HPLC_20250830_0001"
+    
+    metadata_registry: "https://datacatalog.company.com/glycan-analysis"
+    
+    required_metadata:
+      - sample_identifier
+      - analysis_date_time
+      - instrument_id
+      - analyst_id
+      - result_id
+      - assay_type
+      - data_quality_flag
+    
+    versioning_strategy:
+      type: "immutable_append"
+      superseding_rule: "New analysis creates new version, previous remains archived"
+  
+  accessible:
+    input_ports:
+      - name: "csv_ingestion"
+        location: "/data/raw/glycan-analysis/csv/"
+        format: "CSV"
+        frequency: "daily"
+        authentication: "service_account"
+        
+    output_ports:
+      - name: "bronze_layer"
+        location: "/data/bronze/glycan-analysis/"
+        format: "Parquet"
+        access_method: "REST API, SQL"
+      - name: "silver_layer"
+        location: "/data/silver/glycan-analysis/"
+        format: "Delta Lake"
+        access_method: "REST API, SQL, Spark"
+    
+    freshness_constraints:
+      max_data_age: "24 hours"
+      refresh_frequency: "daily"
+      real_time_requirement: false
+    
+    access_controls:
+      roles:
+        - name: "glycan_analyst"
+          permissions: ["read", "write"]
+        - name: "research_scientist"
+          permissions: ["read"]
+        - name: "quality_assurance"
+          permissions: ["read", "validate"]
+        - name: "data_engineer"
+          permissions: ["read", "write", "admin"]
+  
+  interoperable:
+    standardized_elements:
+      - sample_naming_convention
+      - percentage_formats
+      - timestamp_formats
+      - instrument_identifiers
+    
+    cross_links:
+      - entity: "sample_registry"
+        relationship: "sample_name -> sample_master.sample_id"
+      - entity: "instrument_logs"
+        relationship: "instrument_id -> instrument_master.instrument_id"
+      - entity: "batch_records"
+        relationship: "batch_id -> manufacturing.batch_id"
+    
+    data_model_location: "https://docs.company.com/data-models/glycan-analysis"
+  
+  reusable:
+    context_metadata:
+      generation_process: "Size exclusion chromatography HPLC analysis"
+      analytical_method: "Glycan species identification and quantification"
+      quality_standards: "VMRD analytical standards"
+      instrumentation: "HPLC with UV/fluorescence detection"
+    
+    applicability_criteria:
+      use_cases:
+        - "Protein characterization studies"
+        - "Quality control analysis"
+        - "Comparability studies"
+        - "Method development"
+    
+    readiness_criteria:
+      - "All mandatory fields present"
+      - "Data quality checks passed"
+      - "Sum of percentages equals 100% ±0.1%"
+      - "No critical validation failures"
+
+# Data Schema Definitions
+data_schema:
+  bronze_layer:
+    description: "Raw ingested data with minimal transformations"
+    format: "Parquet"
+    
+    source_mapping:
+      csv_file_pattern: "glycan_analysis_*.csv"
+      encoding: "UTF-8"
+      delimiter: ","
+      header_row: true
+      
+    columns:
+      - name: "sample_name"
+        source_column: "Sample Name"
+        data_type: "STRING"
+        nullable: false
+        description: "Unique identifier for the biological sample being analyzed"
+        
+      - name: "result_id" 
+        source_column: "Result ID"
+        data_type: "STRING"
+        nullable: false
+        description: "Unique identifier for this specific glycan analysis result"
+        
+      - name: "g0_percentage"
+        source_column: "G0"
+        data_type: "DECIMAL(5,2)"
+        nullable: true
+        description: "Percentage of G0 glycan species (neutral core fucosylated biantennary)"
+        
+      - name: "g0_n_percentage"
+        source_column: "G0-N"
+        data_type: "DECIMAL(5,2)" 
+        nullable: true
+        description: "Percentage of G0-N glycan species (neutral non-fucosylated biantennary)"
+        
+      - name: "g0f_n_percentage"
+        source_column: "G0F-N"
+        data_type: "DECIMAL(5,2)"
+        nullable: true
+        description: "Percentage of G0F-N glycan species"
+        
+      - name: "g0f_percentage"
+        source_column: "G0F"
+        data_type: "DECIMAL(5,2)"
+        nullable: true
+        description: "Percentage of G0F glycan species (fucosylated biantennary)"
+        
+      - name: "man5_percentage"
+        source_column: "Man5"
+        data_type: "DECIMAL(5,2)"
+        nullable: true
+        description: "Percentage of Man5 glycan species (high mannose)"
+        
+      - name: "unknown_percentage"
+        source_column: "Unknown"
+        data_type: "DECIMAL(5,2)"
+        nullable: true
+        description: "Percentage of unidentified glycan species"
+        
+      - name: "g1fa_percentage"
+        source_column: "G1Fa"
+        data_type: "DECIMAL(5,2)"
+        nullable: true
+        description: "Percentage of G1Fa glycan species (monogalactosylated, fucosylated, antenna a)"
+        
+      - name: "g1fb_percentage"
+        source_column: "G1Fb"
+        data_type: "DECIMAL(5,2)"
+        nullable: true
+        description: "Percentage of G1Fb glycan species (monogalactosylated, fucosylated, antenna b)"
+        
+      - name: "g2f_percentage"
+        source_column: "G2F"
+        data_type: "DECIMAL(5,2)"
+        nullable: true
+        description: "Percentage of G2F glycan species (digalactosylated, fucosylated)"
+        
+      - name: "g1fs1_nana_percentage"
+        source_column: "G1FS1(NANA)"
+        data_type: "DECIMAL(5,2)"
+        nullable: true
+        description: "Percentage of G1FS1 with NANA sialylation"
+        
+      - name: "g2fs1_ngna_percentage"
+        source_column: "G2FS1(NGNA)"
+        data_type: "DECIMAL(5,2)"
+        nullable: true
+        description: "Percentage of G2FS1 with NGNA sialylation"
+        
+      # Metadata columns
+      - name: "ingestion_timestamp"
+        source_column: null
+        data_type: "TIMESTAMP"
+        nullable: false
+        description: "Timestamp when data was ingested into bronze layer"
+        default_value: "CURRENT_TIMESTAMP"
+        
+      - name: "source_file_name"
+        source_column: null
+        data_type: "STRING"
+        nullable: false
+        description: "Name of source CSV file"
+        
+      - name: "data_quality_flag"
+        source_column: null
+        data_type: "STRING"
+        nullable: false
+        description: "Initial data quality assessment flag"
+        default_value: "PENDING"
+
+  silver_layer:
+    description: "Cleaned, validated, and enriched data ready for analytics"
+    format: "Delta Lake"
+    
+    transformations:
+      - name: "data_validation"
+        description: "Apply all data quality rules and flag issues"
+      - name: "metadata_enrichment"
+        description: "Add calculated fields and lookup data"
+      - name: "standardization"
+        description: "Apply naming conventions and format standards"
+      
+    additional_columns:
+      - name: "total_percentage_sum"
+        data_type: "DECIMAL(6,2)"
+        description: "Sum of all glycan percentages for validation"
+        calculation: "SUM of all percentage columns"
+        
+      - name: "percentage_balance_flag"
+        data_type: "BOOLEAN"
+        description: "True if total percentages sum to 100% ±0.1%"
+        
+      - name: "high_mannose_total"
+        data_type: "DECIMAL(5,2)"
+        description: "Total percentage of high mannose species"
+        
+      - name: "fucosylated_total"
+        data_type: "DECIMAL(5,2)"
+        description: "Total percentage of fucosylated species"
+        
+      - name: "sialylated_total"
+        data_type: "DECIMAL(5,2)"
+        description: "Total percentage of sialylated species"
+        
+      - name: "analysis_date_time"
+        data_type: "TIMESTAMP"
+        description: "Date and time of analysis (extracted from result_id or metadata)"
+        
+      - name: "instrument_id"
+        data_type: "STRING"
+        description: "Identifier of HPLC instrument used"
+        
+      - name: "analyst_id"
+        data_type: "STRING" 
+        description: "Identifier of analyst who performed analysis"
+        
+      - name: "batch_id"
+        data_type: "STRING"
+        description: "Manufacturing batch identifier"
+        
+      - name: "quality_score"
+        data_type: "DECIMAL(3,1)"
+        description: "Overall data quality score (0-10)"
+        
+      - name: "data_completeness_pct"
+        data_type: "DECIMAL(5,2)"
+        description: "Percentage of non-null values"
+        
+      - name: "last_updated_timestamp"
+        data_type: "TIMESTAMP"
+        description: "Timestamp when record was last modified"
+        default_value: "CURRENT_TIMESTAMP"
+
+# Data Quality Framework
+data_quality:
+  validation_rules:
+    mandatory_field_checks:
+      - column: "sample_name"
+        rules:
+          - type: "not_null"
+            severity: "ERROR"
+          - type: "regex"
+            pattern: "^[A-Za-z0-9_-]+$"
+            severity: "ERROR"
+            message: "Sample name must contain only alphanumeric characters, hyphens, and underscores"
+          - type: "max_length"
+            value: 50
+            severity: "ERROR"
+            
+      - column: "result_id"
+        rules:
+          - type: "not_null"
+            severity: "ERROR"
+          - type: "unique"
+            severity: "ERROR"
+          - type: "regex"
+            pattern: "^GLY_\\d{8}_\\d{4}$"
+            severity: "ERROR"
+            message: "Result ID must follow format GLY_YYYYMMDD_####"
+    
+    percentage_validation:
+      - column_group: ["g0_percentage", "g0_n_percentage", "g0f_n_percentage", "g0f_percentage", 
+                       "man5_percentage", "unknown_percentage", "g1fa_percentage", "g1fb_percentage", 
+                       "g2f_percentage", "g1fs1_nana_percentage", "g2fs1_ngna_percentage"]
+        rules:
+          - type: "range"
+            min_value: 0.00
+            max_value: 100.00
+            severity: "ERROR"
+          - type: "decimal_precision"
+            decimal_places: 2
+            severity: "ERROR"
+          - type: "sum_validation"
+            target_sum: 100.00
+            tolerance: 0.1
+            severity: "WARNING"
+            message: "Sum of all glycan percentages should equal 100% ±0.1%"
+    
+    business_logic_validation:
+      - rule: "unknown_percentage_threshold"
+        condition: "unknown_percentage <= 5.0"
+        severity: "WARNING"
+        message: "Unknown percentage >5% may indicate analysis issues"
+        
+      - rule: "g1_isomer_correlation"
+        condition: "ABS(g1fa_percentage - g1fb_percentage) <= 10.0"
+        severity: "INFO"
+        message: "G1Fa and G1Fb isomer ratio validation"
+        
+      - rule: "fucosylation_consistency"
+        condition: "(g0f_percentage + g0f_n_percentage + g1fa_percentage + g1fb_percentage + g2f_percentage) >= 0"
+        severity: "INFO"
+        message: "Fucosylated species consistency check"
+
+  data_profiling:
+    statistical_checks:
+      - metric: "completeness"
+        calculation: "COUNT(non_null_values) / COUNT(total_values) * 100"
+        target_threshold: 95.0
+        
+      - metric: "uniqueness"
+        applies_to: ["sample_name", "result_id"]
+        calculation: "COUNT(distinct_values) / COUNT(total_values) * 100"
+        target_threshold: 100.0
+        
+      - metric: "validity"
+        calculation: "COUNT(valid_values) / COUNT(total_values) * 100"
+        target_threshold: 99.0
+        
+      - metric: "consistency"
+        applies_to: "percentage_sum"
+        calculation: "COUNT(records_with_sum_100_plus_minus_0.1) / COUNT(total_records) * 100"
+        target_threshold: 95.0
+
+  data_quality_scoring:
+    weights:
+      completeness: 25
+      validity: 30
+      consistency: 25
+      accuracy: 20
+    
+    thresholds:
+      excellent: 9.0
+      good: 7.5
+      acceptable: 6.0
+      poor: 4.0
+      critical: 0.0
+
+# Processing Pipeline Configuration  
+processing_pipeline:
+  bronze_ingestion:
+    trigger: "file_arrival"
+    batch_size: 1000
+    parallelization: 4
+    error_handling: "quarantine_and_alert"
+    
+    steps:
+      - name: "file_validation"
+        description: "Validate CSV file structure and format"
+      - name: "schema_mapping"
+        description: "Map source columns to bronze schema"
+      - name: "data_type_conversion"
+        description: "Convert data types according to schema"
+      - name: "metadata_injection"
+        description: "Add ingestion metadata"
+      - name: "bronze_storage"
+        description: "Write to bronze layer in Parquet format"
+
+  silver_transformation:
+    trigger: "bronze_data_available"
+    dependencies: ["bronze_ingestion"]
+    
+    steps:
+      - name: "data_quality_validation"
+        description: "Execute all data quality rules"
+      - name: "business_calculations"
+        description: "Calculate derived fields and totals"
+      - name: "reference_data_lookup"
+        description: "Enrich with instrument and sample metadata"
+      - name: "standardization"
+        description: "Apply naming and format standards"
+      - name: "quality_scoring"
+        description: "Calculate overall quality scores"
+      - name: "silver_storage"
+        description: "Write to silver layer in Delta format"
+
+# Monitoring and Alerting
+monitoring:
+  data_quality_metrics:
+    - metric: "daily_ingestion_volume"
+      alert_threshold: "< 10 records OR > 10000 records"
+      
+    - metric: "data_quality_score"
+      alert_threshold: "< 7.0"
+      
+    - metric: "percentage_sum_violations" 
+      alert_threshold: "> 5% of records"
+      
+    - metric: "unknown_percentage_high"
+      alert_threshold: "> 20% of records with unknown_percentage > 5%"
+
+  performance_metrics:
+    - metric: "processing_latency"
+      target: "< 30 minutes"
+      alert_threshold: "> 60 minutes"
+      
+    - metric: "pipeline_success_rate"
+      target: "> 99%"
+      alert_threshold: "< 95%"
+
+  alerting:
+    channels:
+      - email: "glycan-data-team@company.com"
+      - slack: "#glycan-analytics-alerts"
+      
+    severity_levels:
+      - CRITICAL: "Pipeline failure, data corruption"
+      - WARNING: "Data quality issues, performance degradation"  
+      - INFO: "Process completion, statistics"
+
+# Service Level Objectives
+slo:
+  availability:
+    target: "99.5%"
+    measurement_window: "monthly"
+    
+  latency:
+    data_ingestion: "< 15 minutes from file arrival"
+    query_response: "< 5 seconds for standard queries"
+    
+  throughput:
+    daily_processing_capacity: "100,000 records"
+    concurrent_users: "50 users"
+    
+  data_freshness:
+    bronze_layer: "< 30 minutes from source"
+    silver_layer: "< 2 hours from ingestion"
+    
+  completeness:
+    target: "> 95% of expected daily volume"
+    critical_fields: "> 99% completeness"
+
+# Compliance and Governance
+compliance:
+  data_classification: "Internal"
+  
+  privacy:
+    pii_present: false
+    anonymization_required: false
+    
+  retention:
+    bronze_layer: "2 years"
+    silver_layer: "7 years" 
+    archive_location: "long-term-storage/glycan-analysis/"
+    
+  regulatory:
+    gxp_applicable: true
+    gxp_requirements:
+      - "Audit trail for all data modifications"
+      - "Electronic signatures for critical data"
+      - "21 CFR Part 11 compliance"
+    
+  change_management:
+    schema_change_approval: "Data Architecture Review Board"
+    impact_assessment_required: true
+    notification_lead_time: "2 weeks"
+
+# Usage Documentation
+usage:
+  primary_consumers:
+    - name: "Research Scientists"
+      use_cases: ["Protein characterization", "Comparability studies"]
+      access_pattern: "Ad-hoc queries, monthly reports"
+      
+    - name: "Quality Assurance"
+      use_cases: ["Batch release testing", "Stability studies"]
+      access_pattern: "Scheduled reports, real-time monitoring"
+      
+    - name: "Regulatory Affairs"
+      use_cases: ["Submission packages", "Audit support"]
+      access_pattern: "Periodic exports, audit trails"
+
+  example_queries:
+    - description: "Get glycan profile for specific sample"
+      sql: |
+        SELECT sample_name, g0_percentage, g1fa_percentage, g2f_percentage
+        FROM silver.glycan_analysis
+        WHERE sample_name = 'SAMPLE-001'
+        
+    - description: "Monitor data quality trends"
+      sql: |
+        SELECT DATE(analysis_date_time) as analysis_date,
+               AVG(quality_score) as avg_quality,
+               COUNT(*) as record_count
+        FROM silver.glycan_analysis
+        WHERE analysis_date_time >= CURRENT_DATE - INTERVAL 30 DAY
+        GROUP BY DATE(analysis_date_time)
+        ORDER BY analysis_date DESC
+
+# Technical Implementation Notes
+technical_notes:
+  recommended_tools:
+    ingestion: "Apache Spark, Azure Data Factory"
+    storage: "Azure Data Lake Storage Gen2, Delta Lake"
+    processing: "Databricks, Apache Spark"
+    monitoring: "Azure Monitor, Grafana"
+    
+  estimated_resources:
+    storage_growth: "10GB per month"
+    compute_requirements: "4 cores, 16GB RAM for processing"
+    
+  dependencies:
+    - service: "Sample Registry API"
+      purpose: "Sample metadata enrichment"
+    - service: "Instrument Management System"  
+      purpose: "Instrument calibration data"
+    - service: "LIMS"
+      purpose: "Analysis workflow integration"
